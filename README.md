@@ -1,4 +1,4 @@
-# Eazy Pass Memo tool
+# Eazy Pass Note tool
 
 ## Overview
 
@@ -17,7 +17,7 @@ $ npm install -g .
 ## Command
 
 ```bash
-epmemo {COMMAND} [OPTIONS]
+epnote {COMMAND} [OPTIONS]
 
 COMMAND:
     new {name}                 create new password memo
