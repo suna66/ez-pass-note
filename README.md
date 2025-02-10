@@ -1,8 +1,8 @@
-# Eazy Pass Note tool
+# Eazy Pass Note
 
 ## Overview
 
-Generating and management password memo tool
+Generating and management password tool
 
 ## Install
 
