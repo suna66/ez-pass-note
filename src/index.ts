@@ -93,5 +93,7 @@ function commandOptions(): CommandOption {
 
 (function () {
     const cmd = commandOptions();
-    startCommand(cmd);
+    startCommand(cmd).then((result) => {
+        process.exit(result);
+    });
 })();

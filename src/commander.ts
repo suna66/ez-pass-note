@@ -3,8 +3,6 @@ import {
     makeDir,
     createRandomString,
     copyClipboard,
-    encryptText,
-    decryptText,
     existPath,
 } from "./functions";
 import { CommandOption, NoteType, CommandIndex } from "./types";
@@ -50,10 +48,10 @@ const DEF_NUMBER = "0123456789";
 const DEF_MARK = ".-=,:#&!?[]{}";
 
 let DEBUG = true;
-let memoList: Array<NoteType> = undefined;
-const pmemoDir = ".ez-pmemo";
-const pmemoFile = "pmemo.json";
-const pmemoKeyFile = "pmemo.key";
+let noteList: Array<NoteType> = undefined;
+const pNoteDir = ".ez-pnote";
+const pNoteFile = "p-note.json";
+const pNoteKeyFile = "p-note.key";
 
 type CommandFunctionType = {
     name: string;
@@ -64,49 +62,49 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
         "new",
         {
             name: "new",
-            func: createPasswordMemo,
+            func: createPasswordNote,
         },
     ],
     [
         "ls",
         {
             name: "ls",
-            func: listPasswordMemo,
+            func: listPasswordNote,
         },
     ],
     [
         "get",
         {
             name: "get",
-            func: getPasswordMemo,
+            func: getPasswordNote,
         },
     ],
     [
         "update",
         {
             name: "update",
-            func: updatePasswordMemo,
+            func: updatePasswordNote,
         },
     ],
     [
         "history",
         {
             name: "history",
-            func: getHistoryPasswordMemo,
+            func: getHistoryPasswordNote,
         },
     ],
     [
         "delete",
         {
             name: "delete",
-            func: deletePasswordMemo,
+            func: deletePasswordNote,
         },
     ],
     [
         "enc",
         {
             name: "enc",
-            func: encryptMemo,
+            func: encryptNote,
         },
     ],
     [
@@ -118,8 +116,8 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
     ],
 ]);
 
-async function createPasswordMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- createPasswordMemo");
+async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- createPasswordNote");
     const commandList = cmd.commandList;
     const name = commandList[CommandIndex.NOTE_NAME];
     if (
@@ -130,7 +128,7 @@ async function createPasswordMemo(cmd: CommandOption): Promise<boolean> {
         console.error("error: all character is disabled. can't create password.");
         return false;
     }
-    if (hasSameNoteName(name, memoList)) {
+    if (hasSameNoteName(name, noteList)) {
         console.error("error: %s is already exist", name);
         return false;
     }
@@ -148,30 +146,32 @@ async function createPasswordMemo(cmd: CommandOption): Promise<boolean> {
     option.currentPassword = str;
     option.history.push(str);
 
-    memoList.push(option);
-    if (DEBUG) console.log(memoList);
+    noteList.push(option);
+    if (DEBUG) console.log(noteList);
     if (!writeNote(cmd.key)) {
-        console.error("error: save new memo information");
+        console.error("error: save new Note information");
         return false;
     }
+    console.log(str);
+    copyClipboard(str);
 
     return true;
 }
 
-async function listPasswordMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- listPasswordMemo");
-    for (let m of memoList) {
+async function listPasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- listPasswordNote");
+    for (let m of noteList) {
         console.log(m.name);
     }
     return true;
 }
 
-async function getPasswordMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- getPasswordMemo");
+async function getPasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- getPasswordNote");
     const commandList = cmd.commandList;
     const name = commandList[CommandIndex.NOTE_NAME];
 
-    const m = getNoteInfo(name, memoList);
+    const m = getNoteInfo(name, noteList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
@@ -182,12 +182,12 @@ async function getPasswordMemo(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function updatePasswordMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- updatePasswordMemo");
+async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- updatePasswordNote");
     const commandList = cmd.commandList;
     const name = commandList[CommandIndex.NOTE_NAME];
 
-    const m = getNoteInfo(name, memoList);
+    const m = getNoteInfo(name, noteList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
@@ -198,9 +198,9 @@ async function updatePasswordMemo(cmd: CommandOption): Promise<boolean> {
     if (m.history.length > 10) {
         m.history.shift();
     }
-    if (DEBUG) console.log(memoList);
+    if (DEBUG) console.log(noteList);
     if (!writeNote(cmd.key)) {
-        console.error("error: save new memo information");
+        console.error("error: save new Note information");
         return false;
     }
     console.log(m.currentPassword);
@@ -209,12 +209,12 @@ async function updatePasswordMemo(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function getHistoryPasswordMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- getHistoryPasswordMemo");
+async function getHistoryPasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- getHistoryPasswordNote");
     const commandList = cmd.commandList;
     const name = commandList[CommandIndex.NOTE_NAME];
 
-    const m = getNoteInfo(name, memoList);
+    const m = getNoteInfo(name, noteList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
@@ -225,22 +225,22 @@ async function getHistoryPasswordMemo(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function deletePasswordMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- deletePasswordMemo");
+async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- deletePasswordNote");
     const commandList = cmd.commandList;
     const name = commandList[CommandIndex.NOTE_NAME];
 
-    memoList = deleteNoteInfo(name, memoList);
-    if (DEBUG) console.log(memoList);
+    noteList = deleteNoteInfo(name, noteList);
+    if (DEBUG) console.log(noteList);
     if (!writeNote(cmd.key)) {
-        console.error("error: save new memo information");
+        console.error("error: save new information");
         return false;
     }
     return true;
 }
 
-async function encryptMemo(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- setupMemo");
+async function encryptNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- setupNote");
 
     const encryptKey = cmd.encryptKey;
     if (encryptKey == undefined || encryptKey.length == 0) {
@@ -248,7 +248,7 @@ async function encryptMemo(cmd: CommandOption): Promise<boolean> {
         return false;
     }
     if (!writeNote(encryptKey)) {
-        console.error("error: save new memo information");
+        console.error("error: save new information");
         return false;
     }
     return true;
@@ -262,17 +262,17 @@ async function showHelp(cmd: CommandOption): Promise<boolean> {
 
 function getNoteDir(): string {
     const home = getHomeDirectory();
-    return `${home}/${pmemoDir}`;
+    return `${home}/${pNoteDir}`;
 }
 
 function getNoteFilePath(): string {
     const dir = getNoteDir();
-    return `${dir}/${pmemoFile}`;
+    return `${dir}/${pNoteFile}`;
 }
 
 function getNoteKeyFilePath(): string {
     const dir = getNoteDir();
-    return `${dir}/${pmemoKeyFile}`;
+    return `${dir}/${pNoteKeyFile}`;
 }
 
 function loadNote(key: string = undefined): boolean {
@@ -280,7 +280,7 @@ function loadNote(key: string = undefined): boolean {
 
     let res = makeDir(dir);
     if (!res) {
-        console.error("error: create ez-pmemo directory");
+        console.error("error: create epnote directory");
         return false;
     }
     if (existPath(getNoteKeyFilePath()) && (key == undefined || key.length == 0)) {
@@ -292,13 +292,13 @@ function loadNote(key: string = undefined): boolean {
         console.error("error: load note file");
         return false;
     }
-    memoList = list;
+    noteList = list;
 
     return true;
 }
 
 function writeNote(key: string = undefined): boolean {
-    return writeNoteFile(getNoteFilePath(), memoList, key, getNoteKeyFilePath());
+    return writeNoteFile(getNoteFilePath(), noteList, key, getNoteKeyFilePath());
 }
 
 function createPassword(option: NoteType): string {
@@ -318,30 +318,30 @@ function createPassword(option: NoteType): string {
     return createRandomString(option.size, alpha, numb, mark);
 }
 
-export async function startCommand(cmdLine: CommandOption) {
+export async function startCommand(cmdLine: CommandOption): Promise<number> {
     DEBUG = cmdLine.debug;
     if (DEBUG) {
         console.log(cmdLine);
     }
     if (cmdLine.commandList.length == 0) {
         await showHelp(cmdLine);
-        return;
+        return -1;
     }
     const cmd = cmdLine.commandList[CommandIndex.CMD_NAME];
     if (!commandFunctions.has(cmd)) {
         await showHelp(cmdLine);
-        return;
+        return -1;
     }
     if (cmd != "help") {
         if (!loadNote(cmdLine.key)) {
-            return;
+            return -1;
         }
     }
 
     if (DEBUG) console.log(commandFunctions.get(cmd));
     const result = await commandFunctions.get(cmd).func(cmdLine);
     if (!result) {
-        console.error("error: command has error");
-        return;
+        return 1;
     }
+    return 0;
 }
