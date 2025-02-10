@@ -54,6 +54,8 @@ export function createRandomString(
     let key = "";
     if (ascii != undefined) {
         key += ascii;
+        let capitals = ascii.toUpperCase();
+        key += capitals;
     }
     if (num != undefined) {
         key += num;
@@ -69,6 +71,7 @@ export function createRandomString(
 
         if (ascii != undefined) {
             if (!hasString(str, ascii)) continue;
+            if (!hasString(str, ascii.toUpperCase())) continue;
         }
         if (num != undefined) {
             if (!hasString(str, num)) continue;

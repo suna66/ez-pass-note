@@ -22,15 +22,14 @@ version: ${VERSION}
 epmemo {COMMAND} [OPTIONS]
 
 COMMAND:
-    new {name}                 create new password memo
-    ls                         list managed memo
+    new {name}                 create new managed password name
+    ls                         list managed password name
     get {name}                 get password and copy to clipboard(man/win)
     update {name}              update password
     history {name}             display history of password(past 10 items)
-    delete {name}              delete memo
-    enc                        encrypt memo file
+    delete {name}              delete password
+    enc                        encrypt password file
     help                       show help message
-
 
 OPTIONS(new):
     -s/--size {value}             password length(integer value). default is 8.
@@ -39,14 +38,14 @@ OPTIONS(new):
     -m/--mark {true/false}        using mark or not for password. default is true.
 
 OPTIONS(enc):
-    -e/--encrypt_key {value}       set new secret key for encrypt/decrypt memo file(required)
+    -e/--encrypt_key {value}       set new secret key for encrypt/decrypt password file(required)
 
 OPTIONS(common)
     -v/--verbose                  verbose mode
-    -k/--secret_key {value}       secret key for encrypt/decrypt memo file(required if memo file is encrypted)
+    -k/--secret_key {value}       secret key for encrypt/decrypt password file(required if password file is encrypted)
 `;
 
-const DEF_ASCII = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const DEF_ALPHA = "abcdefghijklmnopqrstuvwxyz";
 const DEF_NUMBER = "0123456789";
 const DEF_MARK = ".-=,:#&!?[]{}";
 
@@ -303,7 +302,7 @@ function writeNote(key: string = undefined): boolean {
 }
 
 function createPassword(option: NoteType): string {
-    let alpha = DEF_ASCII;
+    let alpha = DEF_ALPHA;
     let numb = DEF_NUMBER;
     let mark = DEF_MARK;
     if (!option.isAlphabet) {
