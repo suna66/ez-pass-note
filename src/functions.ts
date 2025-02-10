@@ -88,6 +88,7 @@ export async function copyClipboard(str: string) {
     const platform = process.platform;
 
     let cmd = "clip";
+    let option = [];
     if (platform == "darwin") {
         // Mac
         cmd = "pbcopy";
@@ -97,9 +98,11 @@ export async function copyClipboard(str: string) {
         if (exist == null) {
             return false;
         }
-        cmd = "xsel --clipboard --input";
+        cmd = "xsel";
+        option.push("--clipboard");
+        option.push("--input");
     }
-    const proc = spawn(cmd);
+    const proc = spawn(cmd, option);
     proc.stdin.write(str, "utf8");
     await new Promise((r) => proc.stdin.end(r));
 

@@ -283,7 +283,7 @@ function loadNote(key: string = undefined): boolean {
         console.error("error: create ez-pmemo directory");
         return false;
     }
-    if (existPath(getNoteFilePath()) && (key == undefined || key.length == 0)) {
+    if (existPath(getNoteKeyFilePath()) && (key == undefined || key.length == 0)) {
         console.error("error: note file is encrypted. please set key using --secret_key option");
         return false;
     }
