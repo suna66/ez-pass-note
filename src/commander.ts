@@ -19,7 +19,7 @@ import {
 const VERSION = "1.0.0";
 const help = `
 version: ${VERSION}
-epmemo {COMMAND} [OPTIONS]
+epnote {COMMAND} [OPTIONS]
 
 COMMAND:
     new {name}                 create new managed password name
