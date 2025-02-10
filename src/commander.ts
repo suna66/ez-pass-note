@@ -5,6 +5,7 @@ import {
     copyClipboard,
     encryptText,
     decryptText,
+    existPath,
 } from "./functions";
 import { CommandOption, NoteType, CommandIndex } from "./types";
 import {
@@ -27,6 +28,7 @@ COMMAND:
     update {name}              update password
     history {name}             display history of password(past 10 items)
     delete {name}              delete memo
+    enc                        encrypt memo file
     help                       show help message
 
 
@@ -36,9 +38,12 @@ OPTIONS(new):
     -n/--number {true/false}      using numbers or not for password. default is true.
     -m/--mark {true/false}        using mark or not for password. default is true.
 
+OPTIONS(enc):
+    -e/--encrypt_key {value}       set new secret key for encrypt/decrypt memo file(required)
 
 OPTIONS(common)
     -v/--verbose                  verbose mode
+    -k/--secret_key {value}       secret key for encrypt/decrypt memo file(required if memo file is encrypted)
 `;
 
 const DEF_ASCII = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -49,6 +54,7 @@ let DEBUG = true;
 let memoList: Array<NoteType> = undefined;
 const pmemoDir = ".ez-pmemo";
 const pmemoFile = "pmemo.json";
+const pmemoKeyFile = "pmemo.key";
 
 type CommandFunctionType = {
     name: string;
@@ -98,6 +104,13 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
         },
     ],
     [
+        "enc",
+        {
+            name: "enc",
+            func: encryptMemo,
+        },
+    ],
+    [
         "help",
         {
             name: "help",
@@ -115,11 +128,11 @@ async function createPasswordMemo(cmd: CommandOption): Promise<boolean> {
         cmd.isNumber == false &&
         cmd.isMark == false
     ) {
-        console.error("all charactor is disabled. can't create password.");
+        console.error("error: all character is disabled. can't create password.");
         return false;
     }
     if (hasSameNoteName(name, memoList)) {
-        console.error("%s is already exsist", name);
+        console.error("error: %s is already exist", name);
         return false;
     }
     const option: NoteType = {
@@ -138,7 +151,7 @@ async function createPasswordMemo(cmd: CommandOption): Promise<boolean> {
 
     memoList.push(option);
     if (DEBUG) console.log(memoList);
-    if (!writeNote()) {
+    if (!writeNote(cmd.key)) {
         console.error("error: save new memo information");
         return false;
     }
@@ -161,10 +174,11 @@ async function getPasswordMemo(cmd: CommandOption): Promise<boolean> {
 
     const m = getNoteInfo(name, memoList);
     if (m == undefined) {
-        console.error("%s is not found", name);
+        console.error("error: %s is not found", name);
         return false;
     }
     console.log(m.currentPassword);
+    copyClipboard(m.currentPassword);
 
     return true;
 }
@@ -176,7 +190,7 @@ async function updatePasswordMemo(cmd: CommandOption): Promise<boolean> {
 
     const m = getNoteInfo(name, memoList);
     if (m == undefined) {
-        console.error("%s is not found", name);
+        console.error("error: %s is not found", name);
         return false;
     }
     const str = createPassword(m);
@@ -186,10 +200,12 @@ async function updatePasswordMemo(cmd: CommandOption): Promise<boolean> {
         m.history.shift();
     }
     if (DEBUG) console.log(memoList);
-    if (!writeNote()) {
+    if (!writeNote(cmd.key)) {
         console.error("error: save new memo information");
         return false;
     }
+    console.log(m.currentPassword);
+    copyClipboard(m.currentPassword);
 
     return true;
 }
@@ -201,7 +217,7 @@ async function getHistoryPasswordMemo(cmd: CommandOption): Promise<boolean> {
 
     const m = getNoteInfo(name, memoList);
     if (m == undefined) {
-        console.error("%s is not found", name);
+        console.error("error: %s is not found", name);
         return false;
     }
     for (let history of m.history) {
@@ -217,7 +233,22 @@ async function deletePasswordMemo(cmd: CommandOption): Promise<boolean> {
 
     memoList = deleteNoteInfo(name, memoList);
     if (DEBUG) console.log(memoList);
-    if (!writeNote()) {
+    if (!writeNote(cmd.key)) {
+        console.error("error: save new memo information");
+        return false;
+    }
+    return true;
+}
+
+async function encryptMemo(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- setupMemo");
+
+    const encryptKey = cmd.encryptKey;
+    if (encryptKey == undefined || encryptKey.length == 0) {
+        console.error("error: encrypt key is not set");
+        return false;
+    }
+    if (!writeNote(encryptKey)) {
         console.error("error: save new memo information");
         return false;
     }
@@ -230,37 +261,45 @@ async function showHelp(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-function getNotePath(): string {
+function getNoteDir(): string {
     const home = getHomeDirectory();
     return `${home}/${pmemoDir}`;
 }
 
-function getNoteFile(): string {
-    const dir = getNotePath();
+function getNoteFilePath(): string {
+    const dir = getNoteDir();
     return `${dir}/${pmemoFile}`;
 }
 
-function loadNote(): boolean {
-    const dir = getNotePath();
+function getNoteKeyFilePath(): string {
+    const dir = getNoteDir();
+    return `${dir}/${pmemoKeyFile}`;
+}
+
+function loadNote(key: string = undefined): boolean {
+    const dir = getNoteDir();
 
     let res = makeDir(dir);
     if (!res) {
         console.error("error: create ez-pmemo directory");
         return false;
     }
-    const memoFile = getNoteFile();
-    const list = loadNoteFile(memoFile);
-    if (list != undefined) {
-        memoList = list;
-    } else {
-        memoList = [];
+    if (existPath(getNoteFilePath()) && (key == undefined || key.length == 0)) {
+        console.error("error: note file is encrypted. please set key using --secret_key option");
+        return false;
     }
+    const list = loadNoteFile(getNoteFilePath(), key, getNoteKeyFilePath());
+    if (list == undefined) {
+        console.error("error: load note file");
+        return false;
+    }
+    memoList = list;
+
     return true;
 }
 
-function writeNote(): boolean {
-    const memoFile = getNoteFile();
-    return writeNoteFile(memoFile, memoList);
+function writeNote(key: string = undefined): boolean {
+    return writeNoteFile(getNoteFilePath(), memoList, key, getNoteKeyFilePath());
 }
 
 function createPassword(option: NoteType): string {
@@ -281,6 +320,7 @@ function createPassword(option: NoteType): string {
 }
 
 export async function startCommand(cmdLine: CommandOption) {
+    DEBUG = cmdLine.debug;
     if (DEBUG) {
         console.log(cmdLine);
     }
@@ -293,29 +333,16 @@ export async function startCommand(cmdLine: CommandOption) {
         await showHelp(cmdLine);
         return;
     }
-    if (!loadNote()) {
-        return;
+    if (cmd != "help") {
+        if (!loadNote(cmdLine.key)) {
+            return;
+        }
     }
 
     if (DEBUG) console.log(commandFunctions.get(cmd));
     const result = await commandFunctions.get(cmd).func(cmdLine);
     if (!result) {
-        console.error("command has error");
+        console.error("error: command has error");
         return;
     }
-
-    // const encKey = encryptText("hello world text", "testpass");
-    // console.log(encKey);
-    // const txt = decryptText(
-    //     encKey.cipherText,
-    //     "testpass",
-    //     encKey.iv,
-    //     encKey.salt
-    // );
-
-    // console.log(txt);
-
-    // const str = createRandomString(12, DEF_ASCII, DEF_NUMBER, DEF_MARK);
-    // console.log(str);
-    // copyClipboard(str);
 }

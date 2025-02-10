@@ -13,7 +13,7 @@ export function getHomeDirectory(): string {
     return process.env[process.platform == "win32" ? "USERPROFILE" : "HOME"];
 }
 
-export function exsistPath(path: string): boolean {
+export function existPath(path: string): boolean {
     if (fs.existsSync(path)) {
         return true;
     }
@@ -90,8 +90,8 @@ export async function copyClipboard(str: string) {
         cmd = "pbcopy";
     } else if (platform == "linux") {
         // Linux
-        const exsist = await which("xsel", { nothrow: true });
-        if (exsist == null) {
+        const exist = await which("xsel", { nothrow: true });
+        if (exist == null) {
             return false;
         }
         cmd = "xsel --clipboard --input";

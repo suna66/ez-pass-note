@@ -26,6 +26,7 @@ COMMAND:
     update {name}              update password
     history {name}             display history of password(past 10 items)
     delete {name}              delete memo
+    enc                        encrypt memo file
     help                       show help message
 
 
@@ -35,7 +36,10 @@ OPTIONS(new):
     -n/--number {true/false}      using numbers or not for password. default is true.
     -m/--mark {true/false}        using mark or not for password. default is true.
 
+OPTIONS(enc):
+    -e/--encrypt_key {value}       set new secret key for encrypt/decrypt memo file(required)
+
 OPTIONS(common)
     -v/--verbose                  verbose mode
+    -k/--secret_key {value}       secret key for encrypt/decrypt memo file(required if memo file is encrypted)
 ```
-

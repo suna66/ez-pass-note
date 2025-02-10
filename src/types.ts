@@ -4,6 +4,8 @@ export type CommandOption = {
     isNumber: boolean;
     isMark: boolean;
     debug: boolean;
+    key: string;
+    encryptKey: string;
     commandList: Array<string>;
 };
 
