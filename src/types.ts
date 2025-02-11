@@ -5,6 +5,8 @@ export type CommandOption = {
     isMark: boolean;
     debug: boolean;
     key: string;
+    yes: boolean;
+    directory: string;
     commandList: Array<string>;
 };
 

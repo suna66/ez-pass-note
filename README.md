@@ -39,6 +39,8 @@ OPTIONS(new):
 OPTIONS(common)
     -v/--verbose                  verbose mode
     -k/--secret_key {value}       secret key for encrypt/decrypt password file(required if password file is encrypted)
+    -d/--dirctory {path}          specified directory to save password managed file and key file.     
+    -y/--yes                      automatically accept prompts
 ```
 
 
