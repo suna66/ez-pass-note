@@ -28,11 +28,6 @@ const options = {
         short: "k",
         multiple: false,
     },
-    encrypt_key: {
-        type: "string",
-        short: "e",
-        multiple: false,
-    },
     verbose: {
         type: "boolean",
         short: "v",
@@ -54,7 +49,6 @@ function commandOptions(): CommandOption {
         isMark: true,
         debug: false,
         key: undefined,
-        encryptKey: undefined,
         commandList: [],
     };
 
@@ -78,9 +72,6 @@ function commandOptions(): CommandOption {
     }
     if (values["secret_key"] != undefined) {
         commandOption.key = values["secret_key"];
-    }
-    if (values["encrypt_key"] != undefined) {
-        commandOption.encryptKey = values["encrypt_key"];
     }
 
     if (positionals != undefined) {

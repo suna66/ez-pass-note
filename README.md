@@ -26,7 +26,8 @@ COMMAND:
     update {name}              update password
     history {name}             display history of password(past 10 items)
     delete {name}              delete password
-    enc                        encrypt password file
+    enc {key}                  encrypt password file
+    put {name} {key}           put password made other way to this tool
     help                       show help message
 
 OPTIONS(new):
@@ -34,9 +35,6 @@ OPTIONS(new):
     -a/--alphabet {true/false}    using alphabet or not for password. default is true.
     -n/--number {true/false}      using numbers or not for password. default is true.
     -m/--mark {true/false}        using mark or not for password. default is true.
-
-OPTIONS(enc):
-    -e/--encrypt_key {value}       set new secret key for encrypt/decrypt password file(required)
 
 OPTIONS(common)
     -v/--verbose                  verbose mode

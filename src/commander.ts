@@ -5,7 +5,14 @@ import {
     copyClipboard,
     existPath,
 } from "./functions";
-import { CommandOption, NoteType, CommandIndex } from "./types";
+import {
+    CommandIndex_CMD_NAME,
+    CommandIndex_ENCRYPT_KEY,
+    CommandIndex_NOTE_NAME,
+    CommandIndex_PUT_PASSWORD,
+    CommandOption,
+    NoteType,
+} from "./types";
 import {
     loadNoteFile,
     hasSameNoteName,
@@ -13,6 +20,7 @@ import {
     getNoteInfo,
     deleteNoteInfo,
 } from "./note_file";
+import { keyInput } from "./input";
 
 const VERSION = "1.0.0";
 const help = `
@@ -26,7 +34,8 @@ COMMAND:
     update {name}              update password
     history {name}             display history of password(past 10 items)
     delete {name}              delete password
-    enc                        encrypt password file
+    enc {key}                  encrypt password file
+    put {name} {key}           put password made other way to this tool
     help                       show help message
 
 OPTIONS(new):
@@ -34,9 +43,6 @@ OPTIONS(new):
     -a/--alphabet {true/false}    using alphabet or not for password. default is true.
     -n/--number {true/false}      using numbers or not for password. default is true.
     -m/--mark {true/false}        using mark or not for password. default is true.
-
-OPTIONS(enc):
-    -e/--encrypt_key {value}       set new secret key for encrypt/decrypt password file(required)
 
 OPTIONS(common)
     -v/--verbose                  verbose mode
@@ -108,6 +114,13 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
         },
     ],
     [
+        "put",
+        {
+            name: "put",
+            func: putPasswordNote,
+        },
+    ],
+    [
         "help",
         {
             name: "help",
@@ -119,13 +132,19 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
 async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- createPasswordNote");
     const commandList = cmd.commandList;
-    const name = commandList[CommandIndex.NOTE_NAME];
+    if (commandList.length < 2) {
+        console.error("error: new command needs name as an identifier");
+        return false;
+    }
+    const name = commandList[CommandIndex_NOTE_NAME];
     if (
         cmd.isAlphabet == false &&
         cmd.isNumber == false &&
         cmd.isMark == false
     ) {
-        console.error("error: all character is disabled. can't create password.");
+        console.error(
+            "error: all character is disabled. can't create password."
+        );
         return false;
     }
     if (hasSameNoteName(name, noteList)) {
@@ -169,7 +188,11 @@ async function listPasswordNote(cmd: CommandOption): Promise<boolean> {
 async function getPasswordNote(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- getPasswordNote");
     const commandList = cmd.commandList;
-    const name = commandList[CommandIndex.NOTE_NAME];
+    if (commandList.length < 2) {
+        console.error("error: get command needs name as an identifier");
+        return false;
+    }
+    const name = commandList[CommandIndex_NOTE_NAME];
 
     const m = getNoteInfo(name, noteList);
     if (m == undefined) {
@@ -185,7 +208,17 @@ async function getPasswordNote(cmd: CommandOption): Promise<boolean> {
 async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- updatePasswordNote");
     const commandList = cmd.commandList;
-    const name = commandList[CommandIndex.NOTE_NAME];
+    if (commandList.length < 2) {
+        console.error("error: update command needs name as an identifier");
+        return false;
+    }
+    const name = commandList[CommandIndex_NOTE_NAME];
+
+    console.log("update password: %s", name);
+    const ok = await keyInput("Are you sure to update password? (Y/N) : ");
+    if (ok != "Y" && ok != "y") {
+        return true;
+    }
 
     const m = getNoteInfo(name, noteList);
     if (m == undefined) {
@@ -212,7 +245,11 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
 async function getHistoryPasswordNote(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- getHistoryPasswordNote");
     const commandList = cmd.commandList;
-    const name = commandList[CommandIndex.NOTE_NAME];
+    if (commandList.length < 2) {
+        console.error("error: history command needs name as an identifier");
+        return false;
+    }
+    const name = commandList[CommandIndex_NOTE_NAME];
 
     const m = getNoteInfo(name, noteList);
     if (m == undefined) {
@@ -228,7 +265,17 @@ async function getHistoryPasswordNote(cmd: CommandOption): Promise<boolean> {
 async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- deletePasswordNote");
     const commandList = cmd.commandList;
-    const name = commandList[CommandIndex.NOTE_NAME];
+    if (commandList.length < 2) {
+        console.error("error: delete command needs name as an identifier");
+        return false;
+    }
+    const name = commandList[CommandIndex_NOTE_NAME];
+
+    console.log("delete note: %s", name);
+    const ok = await keyInput("Are you sure to delete this password? (Y/N) : ");
+    if (ok != "Y" && ok != "y") {
+        return true;
+    }
 
     noteList = deleteNoteInfo(name, noteList);
     if (DEBUG) console.log(noteList);
@@ -236,21 +283,74 @@ async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
         console.error("error: save new information");
         return false;
     }
+    console.log("deleted %s", name);
     return true;
 }
 
 async function encryptNote(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- setupNote");
+    if (DEBUG) console.log("-- encryptNote");
 
-    const encryptKey = cmd.encryptKey;
+    if (cmd.commandList.length < 2) {
+        console.error("error: enc command needs encrypt key");
+        return false;
+    }
+
+    const encryptKey = cmd.commandList[CommandIndex_ENCRYPT_KEY];
     if (encryptKey == undefined || encryptKey.length == 0) {
         console.error("error: encrypt key is not set");
         return false;
     }
+
+    console.log("encrypt key: %s", encryptKey);
+    const ok = await keyInput("Are you sure to encrypt save file? (Y/N) : ");
+    if (ok != "Y" && ok != "y") {
+        return true;
+    }
+
     if (!writeNote(encryptKey)) {
         console.error("error: save new information");
         return false;
     }
+    console.log("save file is encrypted");
+    return true;
+}
+
+async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- putPasswordNote");
+    const commandList = cmd.commandList;
+    if (commandList.length < 3) {
+        console.error(
+            "error: put command needs name and password you want to put"
+        );
+        return false;
+    }
+    const name = commandList[CommandIndex_NOTE_NAME];
+    const pass = commandList[CommandIndex_PUT_PASSWORD];
+
+    console.log("put password(%s) to %s", pass, name);
+    const ok = await keyInput("Are you sure to put password? (Y/N) : ");
+    if (ok != "Y" && ok != "y") {
+        return true;
+    }
+
+    const m = getNoteInfo(name, noteList);
+    if (m == undefined) {
+        console.error("error: %s is not found", name);
+        return false;
+    }
+    m.currentPassword = pass;
+    m.history.push(pass);
+    if (m.history.length > 10) {
+        m.history.shift();
+    }
+    if (DEBUG) console.log(noteList);
+    if (!writeNote(cmd.key)) {
+        console.error("error: save new Note information");
+        return false;
+    }
+    console.log(m.currentPassword);
+    copyClipboard(m.currentPassword);
+
     return true;
 }
 
@@ -283,8 +383,13 @@ function loadNote(key: string = undefined): boolean {
         console.error("error: create epnote directory");
         return false;
     }
-    if (existPath(getNoteKeyFilePath()) && (key == undefined || key.length == 0)) {
-        console.error("error: note file is encrypted. please set key using --secret_key option");
+    if (
+        existPath(getNoteKeyFilePath()) &&
+        (key == undefined || key.length == 0)
+    ) {
+        console.error(
+            "error: note file is encrypted. please set key using --secret_key option"
+        );
         return false;
     }
     const list = loadNoteFile(getNoteFilePath(), key, getNoteKeyFilePath());
@@ -298,7 +403,12 @@ function loadNote(key: string = undefined): boolean {
 }
 
 function writeNote(key: string = undefined): boolean {
-    return writeNoteFile(getNoteFilePath(), noteList, key, getNoteKeyFilePath());
+    return writeNoteFile(
+        getNoteFilePath(),
+        noteList,
+        key,
+        getNoteKeyFilePath()
+    );
 }
 
 function createPassword(option: NoteType): string {
@@ -327,7 +437,7 @@ export async function startCommand(cmdLine: CommandOption): Promise<number> {
         await showHelp(cmdLine);
         return -1;
     }
-    const cmd = cmdLine.commandList[CommandIndex.CMD_NAME];
+    const cmd = cmdLine.commandList[CommandIndex_CMD_NAME];
     if (!commandFunctions.has(cmd)) {
         await showHelp(cmdLine);
         return -1;
