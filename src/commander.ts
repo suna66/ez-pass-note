@@ -47,6 +47,8 @@ OPTIONS(new):
 OPTIONS(common)
     -v/--verbose                  verbose mode
     -k/--secret_key {value}       secret key for encrypt/decrypt password file(required if password file is encrypted)
+    -d/--dirctory {path}          specified directory to save password managed file and key file.     
+    -y/--yes                      automatically accept prompts
 `;
 
 const DEF_ALPHA = "abcdefghijklmnopqrstuvwxyz";
@@ -167,7 +169,7 @@ async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
 
     noteList.push(option);
     if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key)) {
+    if (!writeNote(cmd.key, cmd.directory)) {
         console.error("error: save new Note information");
         return false;
     }
@@ -214,10 +216,12 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
     }
     const name = commandList[CommandIndex_NOTE_NAME];
 
-    console.log("update password: %s", name);
-    const ok = await keyInput("Are you sure to update password? (Y/N) : ");
-    if (ok != "Y" && ok != "y") {
-        return true;
+    if (!cmd.yes) {
+        console.log("update password: %s", name);
+        const ok = await keyInput("Are you sure to update password? (Y/N) : ");
+        if (ok != "Y" && ok != "y") {
+            return true;
+        }
     }
 
     const m = getNoteInfo(name, noteList);
@@ -232,7 +236,7 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
         m.history.shift();
     }
     if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key)) {
+    if (!writeNote(cmd.key, cmd.directory)) {
         console.error("error: save new Note information");
         return false;
     }
@@ -271,15 +275,19 @@ async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
     }
     const name = commandList[CommandIndex_NOTE_NAME];
 
-    console.log("delete note: %s", name);
-    const ok = await keyInput("Are you sure to delete this password? (Y/N) : ");
-    if (ok != "Y" && ok != "y") {
-        return true;
+    if (!cmd.yes) {
+        console.log("delete note: %s", name);
+        const ok = await keyInput(
+            "Are you sure to delete this password? (Y/N) : "
+        );
+        if (ok != "Y" && ok != "y") {
+            return true;
+        }
     }
 
     noteList = deleteNoteInfo(name, noteList);
     if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key)) {
+    if (!writeNote(cmd.key, cmd.directory)) {
         console.error("error: save new information");
         return false;
     }
@@ -301,13 +309,17 @@ async function encryptNote(cmd: CommandOption): Promise<boolean> {
         return false;
     }
 
-    console.log("encrypt key: %s", encryptKey);
-    const ok = await keyInput("Are you sure to encrypt save file? (Y/N) : ");
-    if (ok != "Y" && ok != "y") {
-        return true;
+    if (!cmd.yes) {
+        console.log("encrypt key: %s", encryptKey);
+        const ok = await keyInput(
+            "Are you sure to encrypt save file? (Y/N) : "
+        );
+        if (ok != "Y" && ok != "y") {
+            return true;
+        }
     }
 
-    if (!writeNote(encryptKey)) {
+    if (!writeNote(encryptKey, cmd.directory)) {
         console.error("error: save new information");
         return false;
     }
@@ -327,10 +339,12 @@ async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
     const name = commandList[CommandIndex_NOTE_NAME];
     const pass = commandList[CommandIndex_PUT_PASSWORD];
 
-    console.log("put password(%s) to %s", pass, name);
-    const ok = await keyInput("Are you sure to put password? (Y/N) : ");
-    if (ok != "Y" && ok != "y") {
-        return true;
+    if (!cmd.yes) {
+        console.log("put password(%s) to %s", pass, name);
+        const ok = await keyInput("Are you sure to put password? (Y/N) : ");
+        if (ok != "Y" && ok != "y") {
+            return true;
+        }
     }
 
     const m = getNoteInfo(name, noteList);
@@ -344,7 +358,7 @@ async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
         m.history.shift();
     }
     if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key)) {
+    if (!writeNote(cmd.key, cmd.directory)) {
         console.error("error: save new Note information");
         return false;
     }
@@ -360,23 +374,26 @@ async function showHelp(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-function getNoteDir(): string {
-    const home = getHomeDirectory();
+function getNoteDir(base: string): string {
+    let home = getHomeDirectory();
+    if (base != undefined) {
+        home = base;
+    }
     return `${home}/${pNoteDir}`;
 }
 
-function getNoteFilePath(): string {
-    const dir = getNoteDir();
+function getNoteFilePath(base: string): string {
+    const dir = getNoteDir(base);
     return `${dir}/${pNoteFile}`;
 }
 
-function getNoteKeyFilePath(): string {
-    const dir = getNoteDir();
+function getNoteKeyFilePath(base: string): string {
+    const dir = getNoteDir(base);
     return `${dir}/${pNoteKeyFile}`;
 }
 
-function loadNote(key: string = undefined): boolean {
-    const dir = getNoteDir();
+function loadNote(key: string = undefined, base: string): boolean {
+    const dir = getNoteDir(base);
 
     let res = makeDir(dir);
     if (!res) {
@@ -384,7 +401,7 @@ function loadNote(key: string = undefined): boolean {
         return false;
     }
     if (
-        existPath(getNoteKeyFilePath()) &&
+        existPath(getNoteKeyFilePath(base)) &&
         (key == undefined || key.length == 0)
     ) {
         console.error(
@@ -392,7 +409,11 @@ function loadNote(key: string = undefined): boolean {
         );
         return false;
     }
-    const list = loadNoteFile(getNoteFilePath(), key, getNoteKeyFilePath());
+    const list = loadNoteFile(
+        getNoteFilePath(base),
+        key,
+        getNoteKeyFilePath(base)
+    );
     if (list == undefined) {
         console.error("error: load note file");
         return false;
@@ -402,12 +423,12 @@ function loadNote(key: string = undefined): boolean {
     return true;
 }
 
-function writeNote(key: string = undefined): boolean {
+function writeNote(key: string = undefined, base: string): boolean {
     return writeNoteFile(
-        getNoteFilePath(),
+        getNoteFilePath(base),
         noteList,
         key,
-        getNoteKeyFilePath()
+        getNoteKeyFilePath(base)
     );
 }
 
@@ -443,7 +464,7 @@ export async function startCommand(cmdLine: CommandOption): Promise<number> {
         return -1;
     }
     if (cmd != "help") {
-        if (!loadNote(cmdLine.key)) {
+        if (!loadNote(cmdLine.key, cmdLine.directory)) {
             return -1;
         }
     }

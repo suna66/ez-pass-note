@@ -32,6 +32,14 @@ const options = {
         type: "boolean",
         short: "v",
     },
+    yes: {
+        type: "boolean",
+        short: "y",
+    },
+    dirctory: {
+        type: "string",
+        short: "d",
+    },
 } as const;
 
 function commandOptions(): CommandOption {
@@ -49,6 +57,8 @@ function commandOptions(): CommandOption {
         isMark: true,
         debug: false,
         key: undefined,
+        yes: false,
+        directory: undefined,
         commandList: [],
     };
 
@@ -72,6 +82,12 @@ function commandOptions(): CommandOption {
     }
     if (values["secret_key"] != undefined) {
         commandOption.key = values["secret_key"];
+    }
+    if (values["yes"] != undefined) {
+        commandOption.yes = values["yes"];
+    }
+    if (values["dirctory"] != undefined) {
+        commandOption.directory = values["dirctory"];
     }
 
     if (positionals != undefined) {
