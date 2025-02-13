@@ -174,7 +174,7 @@ async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
         return false;
     }
     console.log(str);
-    copyClipboard(str);
+    await copyClipboard(str);
 
     return true;
 }
@@ -202,7 +202,7 @@ async function getPasswordNote(cmd: CommandOption): Promise<boolean> {
         return false;
     }
     console.log(m.currentPassword);
-    copyClipboard(m.currentPassword);
+    await copyClipboard(m.currentPassword);
 
     return true;
 }
@@ -241,7 +241,7 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
         return false;
     }
     console.log(m.currentPassword);
-    copyClipboard(m.currentPassword);
+    await copyClipboard(m.currentPassword);
 
     return true;
 }
@@ -363,7 +363,7 @@ async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
         return false;
     }
     console.log(m.currentPassword);
-    copyClipboard(m.currentPassword);
+    await copyClipboard(m.currentPassword);
 
     return true;
 }
