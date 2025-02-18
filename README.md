@@ -27,7 +27,7 @@ COMMAND:
     history {name}             display history of password(past 10 items)
     delete {name}              delete password
     enc {key}                  encrypt password file
-    put {name} {key}           put password made other way to this tool
+    put {name}                 put password made other way to this tool
     help                       show help message
 
 OPTIONS(new):
@@ -39,7 +39,7 @@ OPTIONS(new):
 OPTIONS(common)
     -v/--verbose                  verbose mode
     -k/--secret_key {value}       secret key for encrypt/decrypt password file(required if password file is encrypted)
-    -d/--dirctory {path}          specified directory to save password managed file and key file.     
+    -d/--directory {path}          specified directory to save password managed file and key file.     
     -y/--yes                      automatically accept prompts
 ```
 

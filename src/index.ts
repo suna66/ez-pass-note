@@ -36,7 +36,7 @@ const options = {
         type: "boolean",
         short: "y",
     },
-    dirctory: {
+    directory: {
         type: "string",
         short: "d",
     },
@@ -86,8 +86,8 @@ function commandOptions(): CommandOption {
     if (values["yes"] != undefined) {
         commandOption.yes = values["yes"];
     }
-    if (values["dirctory"] != undefined) {
-        commandOption.directory = values["dirctory"];
+    if (values["directory"] != undefined) {
+        commandOption.directory = values["directory"];
     }
 
     if (positionals != undefined) {
@@ -99,8 +99,13 @@ function commandOptions(): CommandOption {
 }
 
 (function () {
-    const cmd = commandOptions();
-    startCommand(cmd).then((result) => {
-        process.exit(result);
-    });
+    try {
+        const cmd = commandOptions();
+        startCommand(cmd).then((result) => {
+            process.exit(result);
+        });
+    } catch (e) {
+        console.log("error: illegal command line option");
+        process.exit(1);
+    }
 })();
