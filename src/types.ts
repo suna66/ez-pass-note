@@ -27,7 +27,7 @@ export type ProjectType = {
 };
 
 export const CommandIndex_CMD_NAME = 0;
-export const CommandIndex_NOTE_NAME = 1;
+export const CommandIndex_PROJECT_NAME = 1;
 export const CommandIndex_ENCRYPT_KEY = 1;
 export const CommandIndex_PUT_PASSWORD = 2;
 export const CommandIndex_META_ACTION = 1;

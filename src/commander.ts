@@ -8,7 +8,7 @@ import {
 import {
     CommandIndex_CMD_NAME,
     CommandIndex_ENCRYPT_KEY,
-    CommandIndex_NOTE_NAME,
+    CommandIndex_PROJECT_NAME,
     CommandIndex_PUT_PASSWORD,
     CommandIndex_META_ACTION,
     CommandOption,
@@ -24,7 +24,7 @@ import {
 } from "./project_file";
 import { keyInput } from "./input";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const help = `
 version: ${VERSION}
 epnote {COMMAND} [OPTIONS]
@@ -60,9 +60,9 @@ const DEF_MARK = ".-=,:#&!?[]{}";
 
 let DEBUG = true;
 let projectList: Array<ProjectType> = undefined;
-const pNoteDir = ".ez-pnote";
-const pNoteFile = "p-note.json";
-const pNoteKeyFile = "p-note.key";
+const pProjectDir = ".ez-pnote";
+const pProjectFile = "p-note.json";
+const pProjectKeyFile = "p-note.key";
 
 type CommandFunctionType = {
     name: string;
@@ -148,7 +148,7 @@ async function createPasswordProject(cmd: CommandOption): Promise<boolean> {
         console.error("error: new command needs name as an identifier");
         return false;
     }
-    const name = commandList[CommandIndex_NOTE_NAME];
+    const name = commandList[CommandIndex_PROJECT_NAME];
     if (
         cmd.isAlphabet == false &&
         cmd.isNumber == false &&
@@ -180,7 +180,7 @@ async function createPasswordProject(cmd: CommandOption): Promise<boolean> {
     projectList.push(option);
     if (DEBUG) console.log(projectList);
     if (!writeProjects(cmd.key, cmd.directory)) {
-        console.error("error: save new Note information");
+        console.error("error: save new Project information");
         return false;
     }
     console.log(str);
@@ -198,13 +198,13 @@ async function listPasswordProject(cmd: CommandOption): Promise<boolean> {
 }
 
 async function getPasswordProject(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- getPasswordNote");
+    if (DEBUG) console.log("-- getPasswordProject");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
         console.error("error: get command needs name as an identifier");
         return false;
     }
-    const name = commandList[CommandIndex_NOTE_NAME];
+    const name = commandList[CommandIndex_PROJECT_NAME];
 
     const m = getProjectInfo(name, projectList);
     if (m == undefined) {
@@ -224,13 +224,13 @@ async function getPasswordProject(cmd: CommandOption): Promise<boolean> {
 }
 
 async function updatePasswordProject(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- updatePasswordNote");
+    if (DEBUG) console.log("-- updatePasswordProject");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
         console.error("error: update command needs name as an identifier");
         return false;
     }
-    const name = commandList[CommandIndex_NOTE_NAME];
+    const name = commandList[CommandIndex_PROJECT_NAME];
 
     if (!cmd.yes) {
         console.log("update password: %s", name);
@@ -253,7 +253,7 @@ async function updatePasswordProject(cmd: CommandOption): Promise<boolean> {
     }
     if (DEBUG) console.log(projectList);
     if (!writeProjects(cmd.key, cmd.directory)) {
-        console.error("error: save new Note information");
+        console.error("error: save new Project information");
         return false;
     }
     console.log(m.currentPassword);
@@ -263,13 +263,13 @@ async function updatePasswordProject(cmd: CommandOption): Promise<boolean> {
 }
 
 async function getHistoryPasswordProject(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- getHistoryPasswordNote");
+    if (DEBUG) console.log("-- getHistoryPasswordProject");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
         console.error("error: history command needs name as an identifier");
         return false;
     }
-    const name = commandList[CommandIndex_NOTE_NAME];
+    const name = commandList[CommandIndex_PROJECT_NAME];
 
     const m = getProjectInfo(name, projectList);
     if (m == undefined) {
@@ -283,16 +283,16 @@ async function getHistoryPasswordProject(cmd: CommandOption): Promise<boolean> {
 }
 
 async function deletePasswordProject(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- deletePasswordNote");
+    if (DEBUG) console.log("-- deletePasswordProject");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
         console.error("error: delete command needs name as an identifier");
         return false;
     }
-    const name = commandList[CommandIndex_NOTE_NAME];
+    const name = commandList[CommandIndex_PROJECT_NAME];
 
     if (!cmd.yes) {
-        console.log("delete note: %s", name);
+        console.log("delete Project: %s", name);
         const ok = await keyInput(
             "Are you sure to delete this password? (Y/N) : "
         );
@@ -379,7 +379,7 @@ async function manageMeta(cmd: CommandOption): Promise<boolean> {
 }
 
 async function encryptProject(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- encryptNote");
+    if (DEBUG) console.log("-- encryptProject");
 
     if (cmd.commandList.length < 2) {
         console.error("error: enc command needs encrypt key");
@@ -411,7 +411,7 @@ async function encryptProject(cmd: CommandOption): Promise<boolean> {
 }
 
 async function putPasswordProject(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- putPasswordNote");
+    if (DEBUG) console.log("-- putPasswordProject");
     const commandList = cmd.commandList;
     if (commandList.length < 3) {
         console.error(
@@ -419,7 +419,7 @@ async function putPasswordProject(cmd: CommandOption): Promise<boolean> {
         );
         return false;
     }
-    const name = commandList[CommandIndex_NOTE_NAME];
+    const name = commandList[CommandIndex_PROJECT_NAME];
     const pass = commandList[CommandIndex_PUT_PASSWORD];
 
     if (!cmd.yes) {
@@ -442,7 +442,7 @@ async function putPasswordProject(cmd: CommandOption): Promise<boolean> {
     }
     if (DEBUG) console.log(projectList);
     if (!writeProjects(cmd.key, cmd.directory)) {
-        console.error("error: save new Note information");
+        console.error("error: save new Project information");
         return false;
     }
     console.log(m.currentPassword);
@@ -457,26 +457,26 @@ async function showHelp(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-function getNoteDir(base: string): string {
+function getProjectDir(base: string): string {
     let home = getHomeDirectory();
     if (base != undefined) {
         home = base;
     }
-    return `${home}/${pNoteDir}`;
+    return `${home}/${pProjectDir}`;
 }
 
 function getProjectFilePath(base: string): string {
-    const dir = getNoteDir(base);
-    return `${dir}/${pNoteFile}`;
+    const dir = getProjectDir(base);
+    return `${dir}/${pProjectFile}`;
 }
 
 function getProjectKeyFilePath(base: string): string {
-    const dir = getNoteDir(base);
-    return `${dir}/${pNoteKeyFile}`;
+    const dir = getProjectDir(base);
+    return `${dir}/${pProjectKeyFile}`;
 }
 
 function loadProjects(key: string = undefined, base: string): boolean {
-    const dir = getNoteDir(base);
+    const dir = getProjectDir(base);
 
     let res = makeDir(dir);
     if (!res) {
@@ -488,7 +488,7 @@ function loadProjects(key: string = undefined, base: string): boolean {
         (key == undefined || key.length == 0)
     ) {
         console.error(
-            "error: note file is encrypted. please set key using --secret_key option"
+            "error: project file is encrypted. please set key using --secret_key option"
         );
         return false;
     }
@@ -498,7 +498,7 @@ function loadProjects(key: string = undefined, base: string): boolean {
         getProjectKeyFilePath(base)
     );
     if (list == undefined) {
-        console.error("error: load note file");
+        console.error("error: load project file");
         return false;
     }
     projectList = list;
