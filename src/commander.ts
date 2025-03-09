@@ -10,16 +10,18 @@ import {
     CommandIndex_ENCRYPT_KEY,
     CommandIndex_NOTE_NAME,
     CommandIndex_PUT_PASSWORD,
+    CommandIndex_META_ACTION,
     CommandOption,
-    NoteType,
+    ProjectType,
+    MetaType,
 } from "./types";
 import {
-    loadNoteFile,
-    hasSameNoteName,
-    writeNoteFile,
-    getNoteInfo,
-    deleteNoteInfo,
-} from "./note_file";
+    loadProjectFile,
+    hasSameProjectName,
+    writeProjectFile,
+    getProjectInfo,
+    deleteProjectInfo,
+} from "./project_file";
 import { keyInput } from "./input";
 
 const VERSION = "1.0.0";
@@ -28,15 +30,16 @@ version: ${VERSION}
 epnote {COMMAND} [OPTIONS]
 
 COMMAND:
-    new {name}                 create new managed password name
-    ls                         list managed password name
-    get {name}                 get password and copy to clipboard(man/win)
-    update {name}              update password
-    history {name}             display history of password(past 10 items)
-    delete {name}              delete password
-    enc {key}                  encrypt password file
-    put {name} {key}           put password made other way to this tool
-    help                       show help message
+    new {name}                                      create new projecgt name
+    ls                                              list project name
+    get {name}                                      get password and copy to clipboard(man/win)
+    update {name}                                   update password
+    history {name}                                  display history of password(past 10 items)
+    delete {name}                                   delete project
+    meta [add | del] {name} {meta key} {meta data}  insert meta informatioin to project(default: add)
+    enc {key}                                       encrypt password file
+    put {name} {key}                                put password made other way to this tool
+    help                                            show help message
 
 OPTIONS(new):
     -s/--size {value}             password length(integer value). default is 8.
@@ -56,7 +59,7 @@ const DEF_NUMBER = "0123456789";
 const DEF_MARK = ".-=,:#&!?[]{}";
 
 let DEBUG = true;
-let noteList: Array<NoteType> = undefined;
+let projectList: Array<ProjectType> = undefined;
 const pNoteDir = ".ez-pnote";
 const pNoteFile = "p-note.json";
 const pNoteKeyFile = "p-note.key";
@@ -70,56 +73,63 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
         "new",
         {
             name: "new",
-            func: createPasswordNote,
+            func: createPasswordProject,
         },
     ],
     [
         "ls",
         {
             name: "ls",
-            func: listPasswordNote,
+            func: listPasswordProject,
         },
     ],
     [
         "get",
         {
             name: "get",
-            func: getPasswordNote,
+            func: getPasswordProject,
         },
     ],
     [
         "update",
         {
             name: "update",
-            func: updatePasswordNote,
+            func: updatePasswordProject,
         },
     ],
     [
         "history",
         {
             name: "history",
-            func: getHistoryPasswordNote,
+            func: getHistoryPasswordProject,
         },
     ],
     [
         "delete",
         {
             name: "delete",
-            func: deletePasswordNote,
+            func: deletePasswordProject,
+        },
+    ],
+    [
+        "meta",
+        {
+            name: "meta",
+            func: manageMeta,
         },
     ],
     [
         "enc",
         {
             name: "enc",
-            func: encryptNote,
+            func: encryptProject,
         },
     ],
     [
         "put",
         {
             name: "put",
-            func: putPasswordNote,
+            func: putPasswordProject,
         },
     ],
     [
@@ -131,8 +141,8 @@ const commandFunctions: Map<string, CommandFunctionType> = new Map([
     ],
 ]);
 
-async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- createPasswordNote");
+async function createPasswordProject(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- createPasswordProject");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
         console.error("error: new command needs name as an identifier");
@@ -149,11 +159,11 @@ async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
         );
         return false;
     }
-    if (hasSameNoteName(name, noteList)) {
+    if (hasSameProjectName(name, projectList)) {
         console.error("error: %s is already exist", name);
         return false;
     }
-    const option: NoteType = {
+    const option: ProjectType = {
         name: name,
         size: cmd.size,
         isAlphabet: cmd.isAlphabet,
@@ -167,9 +177,9 @@ async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
     option.currentPassword = str;
     option.history.push(str);
 
-    noteList.push(option);
-    if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key, cmd.directory)) {
+    projectList.push(option);
+    if (DEBUG) console.log(projectList);
+    if (!writeProjects(cmd.key, cmd.directory)) {
         console.error("error: save new Note information");
         return false;
     }
@@ -179,15 +189,15 @@ async function createPasswordNote(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function listPasswordNote(cmd: CommandOption): Promise<boolean> {
-    if (DEBUG) console.log("-- listPasswordNote");
-    for (let m of noteList) {
+async function listPasswordProject(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- listPasswordProject");
+    for (let m of projectList) {
         console.log(m.name);
     }
     return true;
 }
 
-async function getPasswordNote(cmd: CommandOption): Promise<boolean> {
+async function getPasswordProject(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- getPasswordNote");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
@@ -196,18 +206,24 @@ async function getPasswordNote(cmd: CommandOption): Promise<boolean> {
     }
     const name = commandList[CommandIndex_NOTE_NAME];
 
-    const m = getNoteInfo(name, noteList);
+    const m = getProjectInfo(name, projectList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
     }
+    if (DEBUG) console.log(m);
     console.log(m.currentPassword);
+    if (m.meta != undefined) {
+        for (var meta of m.meta) {
+            console.log("- %s = %s", meta.key, meta.value);
+        }
+    }
     await copyClipboard(m.currentPassword);
 
     return true;
 }
 
-async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
+async function updatePasswordProject(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- updatePasswordNote");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
@@ -224,7 +240,7 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
         }
     }
 
-    const m = getNoteInfo(name, noteList);
+    const m = getProjectInfo(name, projectList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
@@ -235,8 +251,8 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
     if (m.history.length > 10) {
         m.history.shift();
     }
-    if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key, cmd.directory)) {
+    if (DEBUG) console.log(projectList);
+    if (!writeProjects(cmd.key, cmd.directory)) {
         console.error("error: save new Note information");
         return false;
     }
@@ -246,7 +262,7 @@ async function updatePasswordNote(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function getHistoryPasswordNote(cmd: CommandOption): Promise<boolean> {
+async function getHistoryPasswordProject(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- getHistoryPasswordNote");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
@@ -255,7 +271,7 @@ async function getHistoryPasswordNote(cmd: CommandOption): Promise<boolean> {
     }
     const name = commandList[CommandIndex_NOTE_NAME];
 
-    const m = getNoteInfo(name, noteList);
+    const m = getProjectInfo(name, projectList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
@@ -266,7 +282,7 @@ async function getHistoryPasswordNote(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
+async function deletePasswordProject(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- deletePasswordNote");
     const commandList = cmd.commandList;
     if (commandList.length < 2) {
@@ -285,9 +301,9 @@ async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
         }
     }
 
-    noteList = deleteNoteInfo(name, noteList);
-    if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key, cmd.directory)) {
+    projectList = deleteProjectInfo(name, projectList);
+    if (DEBUG) console.log(projectList);
+    if (!writeProjects(cmd.key, cmd.directory)) {
         console.error("error: save new information");
         return false;
     }
@@ -295,7 +311,74 @@ async function deletePasswordNote(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function encryptNote(cmd: CommandOption): Promise<boolean> {
+async function manageMeta(cmd: CommandOption): Promise<boolean> {
+    if (DEBUG) console.log("-- menageMeta");
+
+    if (cmd.commandList.length < 3) {
+        console.error("error: manage meta command doesn't have enough options");
+        return false;
+    }
+    let actionType = "add";
+    let nextIndex = CommandIndex_META_ACTION;
+    const action = cmd.commandList[CommandIndex_META_ACTION];
+    if (action == "del") {
+        actionType = action;
+        nextIndex++;
+    } else if (action == "add") {
+        nextIndex++;
+    }
+    const name = cmd.commandList[nextIndex++];
+    const metaKey = cmd.commandList[nextIndex++];
+    let metaValue = "";
+    if (actionType == "add") {
+        metaValue = cmd.commandList[nextIndex];
+    }
+    if (name == null || metaKey == null) {
+        console.error("error: manage meta command doesn't have enough options");
+        return false;
+    }
+    const m = getProjectInfo(name, projectList);
+    if (m == undefined) {
+        console.error("error: %s is not found", name);
+        return false;
+    }
+    if (actionType == "del") {
+        const metaList = m.meta;
+        const newMetaList: Array<MetaType> = [];
+        if (meta != undefined) {
+            for (var meta of metaList) {
+                if (meta.key != metaKey) {
+                    newMetaList.push(meta);
+                }
+            }
+        }
+        m.meta = newMetaList;
+    } else {
+        let metaList = m.meta;
+        if (metaList == undefined) {
+            metaList = [];
+        }
+        const newMetaList: Array<MetaType> = [];
+        for (var meta of metaList) {
+            if (meta.key != metaKey) {
+                if (meta.key != metaKey) {
+                    newMetaList.push(meta);
+                }
+            }
+        }
+        newMetaList.push({ key: metaKey, value: metaValue });
+        m.meta = newMetaList;
+    }
+    if (DEBUG) console.log(projectList);
+    if (!writeProjects(cmd.key, cmd.directory)) {
+        console.error("error: save new information");
+        return false;
+    }
+    console.log("managed meta %s", name);
+    return true;
+}
+
+async function encryptProject(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- encryptNote");
 
     if (cmd.commandList.length < 2) {
@@ -319,7 +402,7 @@ async function encryptNote(cmd: CommandOption): Promise<boolean> {
         }
     }
 
-    if (!writeNote(encryptKey, cmd.directory)) {
+    if (!writeProjects(encryptKey, cmd.directory)) {
         console.error("error: save new information");
         return false;
     }
@@ -327,7 +410,7 @@ async function encryptNote(cmd: CommandOption): Promise<boolean> {
     return true;
 }
 
-async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
+async function putPasswordProject(cmd: CommandOption): Promise<boolean> {
     if (DEBUG) console.log("-- putPasswordNote");
     const commandList = cmd.commandList;
     if (commandList.length < 3) {
@@ -347,7 +430,7 @@ async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
         }
     }
 
-    const m = getNoteInfo(name, noteList);
+    const m = getProjectInfo(name, projectList);
     if (m == undefined) {
         console.error("error: %s is not found", name);
         return false;
@@ -357,8 +440,8 @@ async function putPasswordNote(cmd: CommandOption): Promise<boolean> {
     if (m.history.length > 10) {
         m.history.shift();
     }
-    if (DEBUG) console.log(noteList);
-    if (!writeNote(cmd.key, cmd.directory)) {
+    if (DEBUG) console.log(projectList);
+    if (!writeProjects(cmd.key, cmd.directory)) {
         console.error("error: save new Note information");
         return false;
     }
@@ -382,17 +465,17 @@ function getNoteDir(base: string): string {
     return `${home}/${pNoteDir}`;
 }
 
-function getNoteFilePath(base: string): string {
+function getProjectFilePath(base: string): string {
     const dir = getNoteDir(base);
     return `${dir}/${pNoteFile}`;
 }
 
-function getNoteKeyFilePath(base: string): string {
+function getProjectKeyFilePath(base: string): string {
     const dir = getNoteDir(base);
     return `${dir}/${pNoteKeyFile}`;
 }
 
-function loadNote(key: string = undefined, base: string): boolean {
+function loadProjects(key: string = undefined, base: string): boolean {
     const dir = getNoteDir(base);
 
     let res = makeDir(dir);
@@ -401,7 +484,7 @@ function loadNote(key: string = undefined, base: string): boolean {
         return false;
     }
     if (
-        existPath(getNoteKeyFilePath(base)) &&
+        existPath(getProjectKeyFilePath(base)) &&
         (key == undefined || key.length == 0)
     ) {
         console.error(
@@ -409,30 +492,30 @@ function loadNote(key: string = undefined, base: string): boolean {
         );
         return false;
     }
-    const list = loadNoteFile(
-        getNoteFilePath(base),
+    const list = loadProjectFile(
+        getProjectFilePath(base),
         key,
-        getNoteKeyFilePath(base)
+        getProjectKeyFilePath(base)
     );
     if (list == undefined) {
         console.error("error: load note file");
         return false;
     }
-    noteList = list;
+    projectList = list;
 
     return true;
 }
 
-function writeNote(key: string = undefined, base: string): boolean {
-    return writeNoteFile(
-        getNoteFilePath(base),
-        noteList,
+function writeProjects(key: string = undefined, base: string): boolean {
+    return writeProjectFile(
+        getProjectFilePath(base),
+        projectList,
         key,
-        getNoteKeyFilePath(base)
+        getProjectKeyFilePath(base)
     );
 }
 
-function createPassword(option: NoteType): string {
+function createPassword(option: ProjectType): string {
     let alpha = DEF_ALPHA;
     let numb = DEF_NUMBER;
     let mark = DEF_MARK;
@@ -464,7 +547,7 @@ export async function startCommand(cmdLine: CommandOption): Promise<number> {
         return -1;
     }
     if (cmd != "help") {
-        if (!loadNote(cmdLine.key, cmdLine.directory)) {
+        if (!loadProjects(cmdLine.key, cmdLine.directory)) {
             return -1;
         }
     }

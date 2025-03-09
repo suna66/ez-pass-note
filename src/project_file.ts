@@ -1,17 +1,21 @@
-import { NoteType } from "./types";
-import {decryptText, encryptText} from "./functions";
+import { ProjectType } from "./types";
+import { decryptText, encryptText } from "./functions";
 import fs from "fs";
 
-export type NoteKeyInfoType = {iv: string, salt: string}
+export type NoteKeyInfoType = { iv: string; salt: string };
 
-export function loadNoteFile(filename: string, key: string = undefined, keyFile: string = undefined): Array<NoteType> {
+export function loadProjectFile(
+    filename: string,
+    key: string = undefined,
+    keyFile: string = undefined
+): Array<ProjectType> {
     if (!fs.existsSync(filename)) {
-        return []
+        return [];
     }
 
     let text = fs.readFileSync(filename, "utf-8");
     if (key != undefined && key.length > 0) {
-        let keyInfo = getNoteKeyFile(keyFile);
+        let keyInfo = getProjectKeyFile(keyFile);
         if (keyInfo == undefined) {
             console.error("error: note key file not found");
             return undefined;
@@ -29,7 +33,12 @@ export function loadNoteFile(filename: string, key: string = undefined, keyFile:
     return obj;
 }
 
-export function writeNoteFile(filename: string, obj: Array<NoteType>, key: string = undefined,  keyFile: string = undefined): boolean {
+export function writeProjectFile(
+    filename: string,
+    obj: Array<ProjectType>,
+    key: string = undefined,
+    keyFile: string = undefined
+): boolean {
     let text = JSON.stringify(obj);
     try {
         if (key != undefined && key.length > 0) {
@@ -38,7 +47,7 @@ export function writeNoteFile(filename: string, obj: Array<NoteType>, key: strin
                 console.error("error: note file encrypt error");
                 return false;
             }
-            if (!writeNoteKeyFile(keyFile, encrypted.iv, encrypted.salt)) {
+            if (!writeProjectKeyFile(keyFile, encrypted.iv, encrypted.salt)) {
                 console.error("error: can't update key file");
                 return false;
             }
@@ -52,7 +61,7 @@ export function writeNoteFile(filename: string, obj: Array<NoteType>, key: strin
     return true;
 }
 
-export function getNoteKeyFile(filename: string): NoteKeyInfoType {
+export function getProjectKeyFile(filename: string): NoteKeyInfoType {
     if (!fs.existsSync(filename)) {
         return undefined;
     }
@@ -62,10 +71,14 @@ export function getNoteKeyFile(filename: string): NoteKeyInfoType {
         console.error("error: key file format error");
         return undefined;
     }
-    return {iv: lines[0], salt: lines[1]};
+    return { iv: lines[0], salt: lines[1] };
 }
 
-export function writeNoteKeyFile(filename: string, iv: string, salt: string): boolean {
+export function writeProjectKeyFile(
+    filename: string,
+    iv: string,
+    salt: string
+): boolean {
     const text = `${iv}\n${salt}`;
     try {
         fs.writeFileSync(filename, text);
@@ -75,7 +88,10 @@ export function writeNoteKeyFile(filename: string, iv: string, salt: string): bo
     return true;
 }
 
-export function hasSameNoteName(name: string, obj: Array<NoteType>): boolean {
+export function hasSameProjectName(
+    name: string,
+    obj: Array<ProjectType>
+): boolean {
     for (let m of obj) {
         if (name == m.name) {
             return true;
@@ -84,7 +100,10 @@ export function hasSameNoteName(name: string, obj: Array<NoteType>): boolean {
     return false;
 }
 
-export function getNoteInfo(name: string, obj: Array<NoteType>): NoteType {
+export function getProjectInfo(
+    name: string,
+    obj: Array<ProjectType>
+): ProjectType {
     for (let m of obj) {
         if (name == m.name) {
             return m;
@@ -93,10 +112,10 @@ export function getNoteInfo(name: string, obj: Array<NoteType>): NoteType {
     return undefined;
 }
 
-export function deleteNoteInfo(
+export function deleteProjectInfo(
     name: string,
-    obj: Array<NoteType>
-): Array<NoteType> {
+    obj: Array<ProjectType>
+): Array<ProjectType> {
     let index = 0;
     for (let m of obj) {
         if (name == m.name) {

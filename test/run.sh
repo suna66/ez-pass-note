@@ -84,6 +84,28 @@ if [ "${get_pass}" != "newtestpass" ]; then
     exit 1
 fi
 
+echo "--- add meta data"
+${NOTE_CMD} meta test1 ProjectName higehogehogehoge -d ${NOTE_DIR} || {
+    echo "error add meta command 1"
+    exit 1
+}
+${NOTE_CMD} meta add test1 UserName higehogehogehoge -d ${NOTE_DIR} || {
+    echo "error add meta command 2"
+    exit 1
+}
+${NOTE_CMD} get test1 -d ${NOTE_DIR}
+
+echo "--- delete meta data"
+${NOTE_CMD} meta del test1 ProjectName -d ${NOTE_DIR} || {
+    echo "error add meta command 1"
+    exit 1
+}
+${NOTE_CMD} meta del test1 UserName¥ -d ${NOTE_DIR} || {
+    echo "error add meta command 2"
+    exit 1
+}
+${NOTE_CMD} get test1 -d ${NOTE_DIR}
+
 echo "--- delete note"
 ${NOTE_CMD} delete test1 -d ${NOTE_DIR} -y || {
     echo "delete note error"
